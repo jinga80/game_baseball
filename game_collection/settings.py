@@ -131,3 +131,25 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CLAUDE_API_KEY = os.environ.get('CLAUDE_API_KEY', '')
 CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages'
 CLAUDE_MODEL = 'claude-3-5-sonnet-20241022'
+
+# Railway 배포 설정
+import os
+ALLOWED_HOSTS = ['*']  # Railway에서는 모든 호스트 허용
+
+# Railway 포트 설정
+PORT = int(os.environ.get('PORT', 8000))
+
+# 프로덕션 환경 설정
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+
+# 정적 파일 설정 (Railway용)
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_URL = '/static/'
+
+# CSRF 설정 (Railway용)
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.railway.app',
+    'https://*.up.railway.app',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000'
+]
