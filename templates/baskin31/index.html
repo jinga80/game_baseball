@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍦 배스킨라빈스31 게임 - Claude AI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .game-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .game-board {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .number-display {
+            font-size: 3rem;
+            text-align: center;
+            margin: 2rem 0;
+            padding: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .input-group {
+            margin: 1rem 0;
+            text-align: center;
+        }
+        .input-group input {
+            padding: 0.8rem;
+            font-size: 1.2rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 100px;
+            text-align: center;
+            margin: 0 0.5rem;
+        }
+        .btn-game {
+            background: #667eea;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0 0.5rem;
+        }
+        .game-status {
+            text-align: center;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .warning {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .safe {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">🍦 배스킨라빈스31 게임</h1>
+            <p class="subtitle">Claude AI와 함께하는 전략적 숫자 게임!</p>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="game-container">
+            <div class="game-board">
+                <h2>🍦 배스킨라빈스31</h2>
+                <p>1부터 31까지의 숫자를 번갈아가며 선택합니다. 31을 말하는 사람이 지게 됩니다.</p>
+                <p>한 번에 1~3개의 숫자를 선택할 수 있습니다.</p>
+                
+                <div class="game-status">
+                    <h3>게임 규칙</h3>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>플레이어와 AI가 번갈아가며 숫자를 선택</li>
+                        <li>한 번에 1~3개의 연속된 숫자 선택 가능</li>
+                        <li>31을 말하는 사람이 패배</li>
+                        <li>Claude AI가 전략적으로 플레이</li>
+                    </ul>
+                </div>
+                
+                <div class="input-group">
+                    <button class="btn-game" onclick="startGame()">게임 시작</button>
+                </div>
+            </div>
+
+            <div class="game-board" id="gameArea" style="display: none;">
+                <h2>게임 진행</h2>
+                <div class="number-display" id="currentNumber">
+                    <strong>현재 숫자:</strong> <span id="numberText">0</span>
+                </div>
+                
+                <div class="game-status" id="gameStatus">
+                    <p>게임이 시작되었습니다!</p>
+                </div>
+                
+                <div class="input-group" id="playerInput" style="display: none;">
+                    <label for="numberInput">선택할 숫자 개수 (1-3):</label>
+                    <input type="number" id="numberInput" min="1" max="3" value="1">
+                    <button class="btn-game" onclick="playerMove()">선택</button>
+                </div>
+                
+                <div class="input-group">
+                    <button class="btn-game" onclick="endGame()">게임 종료</button>
+                    <button class="btn-game" onclick="restartGame()">다시 시작</button>
+                </div>
+            </div>
+
+            <div class="game-board" id="gameOver" style="display: none;">
+                <h2>게임 종료</h2>
+                <div id="finalResult"></div>
+                <button class="btn-game" onclick="restartGame()">새 게임 시작</button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 게임 컬렉션. Django + Claude AI로 구축되었습니다.</p>
+        </div>
+    </footer>
+
+    <script>
+        let currentNumber = 0;
+        let gameActive = false;
+        let playerTurn = true;
+
+        function startGame() {
+            currentNumber = 0;
+            gameActive = true;
+            playerTurn = true;
+            
+            document.getElementById('gameArea').style.display = 'block';
+            document.getElementById('currentNumber').style.display = 'block';
+            document.getElementById('numberText').textContent = '0';
+            document.getElementById('gameStatus').innerHTML = '<p>게임이 시작되었습니다! 플레이어 차례입니다.</p>';
+            document.getElementById('playerInput').style.display = 'block';
+        }
+
+        function playerMove() {
+            const input = document.getElementById('numberInput');
+            const count = parseInt(input.value);
+            
+            if (count < 1 || count > 3) {
+                alert('1~3 사이의 숫자를 선택해주세요.');
+                return;
+            }
+            
+            if (currentNumber + count > 31) {
+                alert('31을 초과할 수 없습니다.');
+                return;
+            }
+            
+            // 플레이어 이동
+            currentNumber += count;
+            updateDisplay();
+            
+            if (currentNumber >= 31) {
+                endGame('ai');
+                return;
+            }
+            
+            // AI 차례
+            playerTurn = false;
+            document.getElementById('playerInput').style.display = 'none';
+            document.getElementById('gameStatus').innerHTML = '<p>AI가 생각하고 있습니다...</p>';
+            
+            setTimeout(aiMove, 1000);
+        }
+
+        function aiMove() {
+            // AI 전략: 31을 피하고 플레이어를 위험한 상황에 몰아넣기
+            let aiCount = 1;
+            
+            // 31을 피하기 위한 전략
+            if (currentNumber >= 27) {
+                aiCount = 31 - currentNumber;
+            } else if (currentNumber >= 23) {
+                aiCount = 27 - currentNumber;
+            } else if (currentNumber >= 19) {
+                aiCount = 23 - currentNumber;
+            } else if (currentNumber >= 15) {
+                aiCount = 19 - currentNumber;
+            } else if (currentNumber >= 11) {
+                aiCount = 15 - currentNumber;
+            } else if (currentNumber >= 7) {
+                aiCount = 11 - currentNumber;
+            } else if (currentNumber >= 3) {
+                aiCount = 7 - currentNumber;
+            }
+            
+            currentNumber += aiCount;
+            updateDisplay();
+            
+            if (currentNumber >= 31) {
+                endGame('player');
+                return;
+            }
+            
+            // 플레이어 차례
+            playerTurn = true;
+            document.getElementById('playerInput').style.display = 'block';
+            document.getElementById('gameStatus').innerHTML = `<p>AI가 ${aiCount}개를 선택했습니다. 플레이어 차례입니다.</p>`;
+        }
+
+        function updateDisplay() {
+            document.getElementById('numberText').textContent = currentNumber;
+            
+            // 위험도 표시
+            const status = document.getElementById('gameStatus');
+            if (currentNumber >= 27) {
+                status.innerHTML += '<p class="warning">⚠️ 위험! 31에 가까워졌습니다!</p>';
+            } else if (currentNumber >= 20) {
+                status.innerHTML += '<p class="safe">⚡ 주의가 필요합니다.</p>';
+            }
+        }
+
+        function endGame(winner) {
+            gameActive = false;
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'block';
+            
+            const finalResult = document.getElementById('finalResult');
+            if (winner === 'player') {
+                finalResult.innerHTML = '<h3>🎉 축하합니다! AI를 이겼습니다!</h3>';
+            } else {
+                finalResult.innerHTML = '<h3>😔 아쉽네요. AI가 승리했습니다.</h3>';
+            }
+            finalResult.innerHTML += `<p>최종 숫자: ${currentNumber}</p>`;
+        }
+
+        function restartGame() {
+            currentNumber = 0;
+            gameActive = false;
+            playerTurn = true;
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('gameStatus').innerHTML = '<p>게임이 시작되었습니다!</p>';
+            document.getElementById('playerInput').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

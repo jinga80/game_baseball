@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔤 끝말잇기 게임 - Claude AI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .game-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .game-board {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .word-display {
+            font-size: 2rem;
+            text-align: center;
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 2px solid #dee2e6;
+        }
+        .input-group {
+            margin: 1rem 0;
+            text-align: center;
+        }
+        .input-group input {
+            padding: 0.8rem;
+            font-size: 1.2rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 300px;
+            text-align: center;
+        }
+        .btn-game {
+            background: #667eea;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0 0.5rem;
+        }
+        .word-history {
+            margin: 2rem 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .word-item {
+            padding: 0.5rem;
+            margin: 0.2rem 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        .ai-word {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .player-word {
+            border-left-color: #007bff;
+            background: #d1ecf1;
+        }
+        .error-message {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 0.5rem;
+            border-radius: 5px;
+            margin: 0.5rem 0;
+        }
+        .success-message {
+            color: #28a745;
+            background: #d4edda;
+            padding: 0.5rem;
+            border-radius: 5px;
+            margin: 0.5rem 0;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">🔤 끝말잇기 게임</h1>
+            <p class="subtitle">Claude AI와 함께하는 지능적인 끝말잇기!</p>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="game-container">
+            <div class="game-board" id="gameSetup">
+                <h2>게임 설정</h2>
+                <div class="input-group">
+                    <label for="startWord">시작 단어:</label>
+                    <input type="text" id="startWord" value="가나다" placeholder="시작할 단어를 입력하세요">
+                </div>
+                <div class="input-group">
+                    <label for="difficulty">난이도:</label>
+                    <select id="difficulty">
+                        <option value="easy">쉬움</option>
+                        <option value="normal">보통</option>
+                        <option value="hard">어려움</option>
+                        <option value="expert">전문가</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <button class="btn-game" onclick="startGame()">게임 시작</button>
+                </div>
+            </div>
+
+            <div class="game-board" id="gameArea" style="display: none;">
+                <h2>끝말잇기 진행</h2>
+                <div class="word-display" id="currentWord">
+                    <strong>현재 단어:</strong> <span id="wordText"></span>
+                </div>
+                
+                <div class="input-group">
+                    <label for="wordInput">단어를 입력하세요:</label>
+                    <input type="text" id="wordInput" placeholder="단어를 입력하세요" maxlength="20">
+                    <button class="btn-game" onclick="submitWord()">제출</button>
+                </div>
+                
+                <div id="messageArea"></div>
+                
+                <div class="word-history" id="wordHistory">
+                    <h3>단어 기록</h3>
+                </div>
+                
+                <div class="input-group">
+                    <button class="btn-game" onclick="endGame()">게임 종료</button>
+                    <button class="btn-game" onclick="restartGame()">다시 시작</button>
+                </div>
+            </div>
+
+            <div class="game-board" id="gameOver" style="display: none;">
+                <h2>게임 종료</h2>
+                <div id="finalResult"></div>
+                <button class="btn-game" onclick="restartGame()">새 게임 시작</button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 게임 컬렉션. Django + Claude AI로 구축되었습니다.</p>
+        </div>
+    </footer>
+
+    <script>
+        let currentGame = null;
+        let wordHistory = [];
+        let currentWord = '';
+
+        function startGame() {
+            const startWord = document.getElementById('startWord').value.trim();
+            const difficulty = document.getElementById('difficulty').value;
+            
+            if (!startWord) {
+                alert('시작 단어를 입력해주세요.');
+                return;
+            }
+
+            fetch('/wordchain/start/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    startWord: startWord,
+                    difficulty: difficulty
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentGame = data;
+                    currentWord = startWord;
+                    document.getElementById('gameSetup').style.display = 'none';
+                    document.getElementById('gameArea').style.display = 'block';
+                    document.getElementById('wordText').textContent = startWord;
+                    
+                    // 첫 단어를 히스토리에 추가
+                    addWordToHistory(startWord, 'player');
+                    
+                    showMessage('게임이 시작되었습니다!', 'success');
+                } else {
+                    alert('게임 시작 실패: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('게임 시작 중 오류가 발생했습니다.');
+            });
+        }
+
+        function submitWord() {
+            const wordInput = document.getElementById('wordInput');
+            const word = wordInput.value.trim();
+            
+            if (!word) {
+                alert('단어를 입력해주세요.');
+                return;
+            }
+
+            fetch('/wordchain/submit/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    gameId: currentGame.gameId,
+                    word: word
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 플레이어 단어 추가
+                    addWordToHistory(word, 'player');
+                    
+                    if (data.aiWord) {
+                        // AI 단어 추가
+                        addWordToHistory(data.aiWord, 'ai');
+                        currentWord = data.aiWord;
+                        document.getElementById('wordText').textContent = data.aiWord;
+                        
+                        showMessage(`AI: ${data.aiWord} (${data.aiStrategy})`, 'success');
+                    }
+                    
+                    if (data.gameOver) {
+                        endGame(data);
+                    }
+                } else {
+                    if (data.needRetry) {
+                        showMessage(data.error, 'error');
+                    } else {
+                        alert('단어 제출 실패: ' + data.error);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('단어 제출 중 오류가 발생했습니다.');
+            });
+
+            wordInput.value = '';
+        }
+
+        function addWordToHistory(word, type) {
+            wordHistory.push({
+                word: word,
+                type: type,
+                timestamp: new Date().toLocaleTimeString()
+            });
+            updateWordHistory();
+        }
+
+        function updateWordHistory() {
+            const history = document.getElementById('wordHistory');
+            let historyHtml = '<h3>단어 기록</h3>';
+            
+            wordHistory.forEach((item, index) => {
+                const typeClass = item.type === 'ai' ? 'ai-word' : 'player-word';
+                const typeLabel = item.type === 'ai' ? '🤖 AI' : '👤 플레이어';
+                
+                historyHtml += `
+                    <div class="word-item ${typeClass}">
+                        <strong>${typeLabel}</strong>: ${item.word} 
+                        <small>(${item.timestamp})</small>
+                    </div>
+                `;
+            });
+            
+            history.innerHTML = historyHtml;
+            
+            // 스크롤을 맨 아래로
+            history.scrollTop = history.scrollHeight;
+        }
+
+        function showMessage(message, type) {
+            const messageArea = document.getElementById('messageArea');
+            const messageClass = type === 'error' ? 'error-message' : 'success-message';
+            
+            messageArea.innerHTML = `<div class="${messageClass}">${message}</div>`;
+            
+            // 3초 후 메시지 제거
+            setTimeout(() => {
+                messageArea.innerHTML = '';
+            }, 3000);
+        }
+
+        function endGame(data) {
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'block';
+            
+            const finalResult = document.getElementById('finalResult');
+            if (data.winner === 'player') {
+                finalResult.innerHTML = '<h3>🎉 축하합니다! AI를 이겼습니다!</h3>';
+            } else {
+                finalResult.innerHTML = '<h3>😔 아쉽네요. AI가 승리했습니다.</h3>';
+            }
+            finalResult.innerHTML += `<p>총 ${wordHistory.length}개의 단어가 사용되었습니다.</p>`;
+        }
+
+        function restartGame() {
+            currentGame = null;
+            wordHistory = [];
+            currentWord = '';
+            document.getElementById('gameSetup').style.display = 'block';
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('wordHistory').innerHTML = '<h3>단어 기록</h3>';
+            document.getElementById('messageArea').innerHTML = '';
+            document.getElementById('startWord').value = '가나다';
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Enter 키로 단어 제출
+        document.getElementById('wordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitWord();
+            }
+        });
+    </script>
+</body>
+</html>

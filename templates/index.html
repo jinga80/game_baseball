@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 게임 컬렉션 - Django + Claude AI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        .game-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .game-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        .game-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        .game-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        .game-description {
+            color: #666;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+        .play-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .play-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .hero-section {
+            text-align: center;
+            padding: 3rem 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            margin-bottom: 3rem;
+        }
+        .hero-title {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        .hero-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        .features-section {
+            background: #f8f9fa;
+            padding: 3rem;
+            border-radius: 15px;
+            margin: 2rem 0;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        .feature-item {
+            text-align: center;
+            padding: 1rem;
+        }
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .feature-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        .feature-description {
+            color: #666;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">🎮 게임 컬렉션</h1>
+            <p class="subtitle">Django + Claude AI로 구축된 지능적인 게임들</p>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="hero-section">
+                <h1 class="hero-title">🎮 Claude AI와 함께하는 게임</h1>
+                <p class="hero-subtitle">인공지능이 있는 5가지 미니게임을 즐겨보세요!</p>
+            </div>
+
+            <div class="games-grid">
+                <div class="game-card" onclick="location.href='/baseball/'">
+                    <div class="game-icon">⚾</div>
+                    <h3 class="game-title">숫자야구</h3>
+                    <p class="game-description">Claude AI가 생성한 숫자를 맞춰보세요. 3-5자리 숫자 선택 가능하며, AI가 실시간으로 힌트를 제공합니다.</p>
+                    <button class="play-button">게임 시작</button>
+                </div>
+
+                <div class="game-card" onclick="location.href='/wordchain/'">
+                    <div class="game-icon">🔤</div>
+                    <h3 class="game-title">끝말잇기</h3>
+                    <p class="game-description">Claude AI와 지능적인 끝말잇기를 즐겨보세요. 단어 유효성 검증과 재시도 로직이 포함되어 있습니다.</p>
+                    <button class="play-button">게임 시작</button>
+                </div>
+
+                <div class="game-card" onclick="location.href='/baskin31/'">
+                    <div class="game-icon">🍦</div>
+                    <h3 class="game-title">배스킨라빈스31</h3>
+                    <p class="game-description">1부터 31까지의 숫자를 번갈아가며 선택하는 전략 게임입니다. Claude AI가 수학적 사고로 플레이합니다.</p>
+                    <button class="play-button">게임 시작</button>
+                </div>
+
+                <div class="game-card" onclick="location.href='/gonu/'">
+                    <div class="game-icon">🎯</div>
+                    <h3 class="game-title">고누놀이</h3>
+                    <p class="game-description">3x3 보드에서 가로, 세로, 대각선으로 3개를 연속으로 놓는 틱택토 게임입니다.</p>
+                    <button class="play-button">게임 시작</button>
+                </div>
+
+                <div class="game-card" onclick="location.href='/omok/'">
+                    <div class="game-icon">⚫</div>
+                    <h3 class="game-title">오목</h3>
+                    <p class="game-description">15x15 보드에서 5개를 연속으로 놓는 오목 게임입니다. 난이도별 AI 전략을 경험해보세요.</p>
+                    <button class="play-button">게임 시작</button>
+                </div>
+            </div>
+
+            <div class="features-section">
+                <h2 style="text-align: center; margin-bottom: 2rem;">🌟 주요 특징</h2>
+                <div class="features-grid">
+                    <div class="feature-item">
+                        <div class="feature-icon">🤖</div>
+                        <h3 class="feature-title">Claude AI 통합</h3>
+                        <p class="feature-description">Anthropic의 Claude 3.5 Sonnet을 활용한 지능적인 게임 플레이</p>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🎯</div>
+                        <h3 class="feature-title">5가지 게임</h3>
+                        <p class="feature-description">숫자야구, 끝말잇기, 배스킨31, 고누놀이, 오목 등 다양한 게임 제공</p>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">⚡</div>
+                        <h3 class="feature-title">실시간 플레이</h3>
+                        <p class="feature-description">즉시 게임 시작, 실시간 AI 응답, 부드러운 게임 진행</p>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🎨</div>
+                        <h3 class="feature-title">모던 UI/UX</h3>
+                        <p class="feature-description">반응형 디자인과 직관적인 사용자 인터페이스</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 게임 컬렉션. Django + Claude AI로 구축되었습니다.</p>
+            <p style="margin-top: 0.5rem; font-size: 0.9rem; opacity: 0.8;">
+                🚀 모든 게임이 정상적으로 작동합니다!
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

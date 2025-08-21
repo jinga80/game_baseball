@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 고누놀이 게임 - Claude AI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .game-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .game-board {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .gonu-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 300px;
+            margin: 2rem auto;
+        }
+        .gonu-cell {
+            width: 80px;
+            height: 80px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            cursor: pointer;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        .gonu-cell:hover {
+            background: #e3f2fd;
+            transform: scale(1.05);
+        }
+        .gonu-cell.selected {
+            background: #667eea;
+            color: white;
+        }
+        .gonu-cell.ai {
+            background: #28a745;
+            color: white;
+        }
+        .btn-game {
+            background: #667eea;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0 0.5rem;
+        }
+        .game-status {
+            text-align: center;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .winning-line {
+            background: #ffeb3b !important;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">🎯 고누놀이 게임</h1>
+            <p class="subtitle">Claude AI와 함께하는 전략적 틱택토!</p>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="game-container">
+            <div class="game-board">
+                <h2>🎯 고누놀이 (틱택토)</h2>
+                <p>3x3 보드에서 가로, 세로, 대각선으로 3개를 연속으로 놓으면 승리합니다.</p>
+                
+                <div class="game-status">
+                    <h3>게임 규칙</h3>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>플레이어는 X, AI는 O</li>
+                        <li>가로, 세로, 대각선으로 3개 연속 놓기</li>
+                        <li>Claude AI가 전략적으로 플레이</li>
+                    </ul>
+                </div>
+                
+                <div class="input-group">
+                    <button class="btn-game" onclick="startGame()">게임 시작</button>
+                </div>
+            </div>
+
+            <div class="game-board" id="gameArea" style="display: none;">
+                <h2>게임 진행</h2>
+                <div class="gonu-board" id="gonuBoard">
+                    <div class="gonu-cell" data-index="0" onclick="makeMove(0)"></div>
+                    <div class="gonu-cell" data-index="1" onclick="makeMove(1)"></div>
+                    <div class="gonu-cell" data-index="2" onclick="makeMove(2)"></div>
+                    <div class="gonu-cell" data-index="3" onclick="makeMove(3)"></div>
+                    <div class="gonu-cell" data-index="4" onclick="makeMove(4)"></div>
+                    <div class="gonu-cell" data-index="5" onclick="makeMove(5)"></div>
+                    <div class="gonu-cell" data-index="6" onclick="makeMove(6)"></div>
+                    <div class="gonu-cell" data-index="7" onclick="makeMove(7)"></div>
+                    <div class="gonu-cell" data-index="8" onclick="makeMove(8)"></div>
+                </div>
+                
+                <div class="game-status" id="gameStatus">
+                    <p>게임이 시작되었습니다! 플레이어 차례입니다.</p>
+                </div>
+                
+                <div class="input-group">
+                    <button class="btn-game" onclick="endGame()">게임 종료</button>
+                    <button class="btn-game" onclick="restartGame()">다시 시작</button>
+                </div>
+            </div>
+
+            <div class="game-board" id="gameOver" style="display: none;">
+                <h2>게임 종료</h2>
+                <div id="finalResult"></div>
+                <button class="btn-game" onclick="restartGame()">새 게임 시작</button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 게임 컬렉션. Django + Claude AI로 구축되었습니다.</p>
+        </div>
+    </footer>
+
+    <script>
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameActive = false;
+        let winningCombos = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // 가로
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // 세로
+            [0, 4, 8], [2, 4, 6] // 대각선
+        ];
+
+        function startGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = true;
+            
+            document.getElementById('gameArea').style.display = 'block';
+            document.getElementById('gameStatus').innerHTML = '<p>게임이 시작되었습니다! 플레이어 차례입니다.</p>';
+            
+            // 보드 초기화
+            const cells = document.querySelectorAll('.gonu-cell');
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.className = 'gonu-cell';
+            });
+        }
+
+        function makeMove(index) {
+            if (!gameActive || board[index] !== '' || currentPlayer !== 'X') {
+                return;
+            }
+            
+            // 플레이어 이동
+            board[index] = 'X';
+            updateCell(index, 'X');
+            
+            if (checkWinner('X')) {
+                endGame('player');
+                return;
+            }
+            
+            if (checkDraw()) {
+                endGame('draw');
+                return;
+            }
+            
+            // AI 차례
+            currentPlayer = 'O';
+            document.getElementById('gameStatus').innerHTML = '<p>AI가 생각하고 있습니다...</p>';
+            
+            setTimeout(aiMove, 1000);
+        }
+
+        function aiMove() {
+            if (!gameActive) return;
+            
+            // AI 전략: 승리할 수 있는 수가 있으면 선택, 없으면 방어
+            let bestMove = findBestMove();
+            
+            if (bestMove !== -1) {
+                board[bestMove] = 'O';
+                updateCell(bestMove, 'O');
+                
+                if (checkWinner('O')) {
+                    endGame('ai');
+                    return;
+                }
+                
+                if (checkDraw()) {
+                    endGame('draw');
+                    return;
+                }
+            }
+            
+            // 플레이어 차례
+            currentPlayer = 'X';
+            document.getElementById('gameStatus').innerHTML = '<p>플레이어 차례입니다.</p>';
+        }
+
+        function findBestMove() {
+            // 승리할 수 있는 수 찾기
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] === '') {
+                    board[i] = 'O';
+                    if (checkWinner('O')) {
+                        board[i] = '';
+                        return i;
+                    }
+                    board[i] = '';
+                }
+            }
+            
+            // 플레이어의 승리 수 방어
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] === '') {
+                    board[i] = 'X';
+                    if (checkWinner('X')) {
+                        board[i] = '';
+                        return i;
+                    }
+                    board[i] = '';
+                }
+            }
+            
+            // 중앙 우선
+            if (board[4] === '') return 4;
+            
+            // 모서리 우선
+            const corners = [0, 2, 6, 8];
+            for (let corner of corners) {
+                if (board[corner] === '') return corner;
+            }
+            
+            // 빈 자리 아무 곳이나
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] === '') return i;
+            }
+            
+            return -1;
+        }
+
+        function updateCell(index, player) {
+            const cell = document.querySelector(`[data-index="${index}"]`);
+            cell.textContent = player;
+            cell.className = `gonu-cell ${player === 'O' ? 'ai' : 'selected'}`;
+        }
+
+        function checkWinner(player) {
+            for (let combo of winningCombos) {
+                if (board[combo[0]] === player && 
+                    board[combo[1]] === player && 
+                    board[combo[2]] === player) {
+                    
+                    // 승리 라인 하이라이트
+                    combo.forEach(index => {
+                        const cell = document.querySelector(`[data-index="${index}"]`);
+                        cell.classList.add('winning-line');
+                    });
+                    
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function checkDraw() {
+            return board.every(cell => cell !== '');
+        }
+
+        function endGame(winner) {
+            gameActive = false;
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'block';
+            
+            const finalResult = document.getElementById('finalResult');
+            if (winner === 'player') {
+                finalResult.innerHTML = '<h3>🎉 축하합니다! AI를 이겼습니다!</h3>';
+            } else if (winner === 'ai') {
+                finalResult.innerHTML = '<h3>😔 아쉽네요. AI가 승리했습니다.</h3>';
+            } else {
+                finalResult.innerHTML = '<h3>🤝 무승부입니다!</h3>';
+            }
+        }
+
+        function restartGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = false;
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('gameStatus').innerHTML = '<p>게임이 시작되었습니다!</p>';
+        }
+    </script>
+</body>
+</html>

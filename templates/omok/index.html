@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚫ 오목 게임 - Claude AI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .game-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .game-board {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .omok-board {
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            gap: 1px;
+            max-width: 600px;
+            margin: 2rem auto;
+            background: #8B4513;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .omok-cell {
+            width: 35px;
+            height: 35px;
+            border: 1px solid #654321;
+            background: #DEB887;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .omok-cell:hover {
+            background: #F5DEB3;
+            transform: scale(1.1);
+        }
+        .omok-cell.black {
+            background: radial-gradient(circle, #000 60%, #333 100%);
+            border-radius: 50%;
+        }
+        .omok-cell.white {
+            background: radial-gradient(circle, #fff 60%, #ddd 100%);
+            border-radius: 50%;
+        }
+        .omok-cell.winning {
+            animation: winning-pulse 1s infinite;
+        }
+        @keyframes winning-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .btn-game {
+            background: #667eea;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0 0.5rem;
+        }
+        .game-status {
+            text-align: center;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .game-controls {
+            text-align: center;
+            margin: 1rem 0;
+        }
+        .difficulty-selector {
+            margin: 1rem 0;
+        }
+        .difficulty-selector select {
+            padding: 0.5rem;
+            font-size: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin: 0 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">⚫ 오목 게임</h1>
+            <p class="subtitle">Claude AI와 함께하는 전략적 오목!</p>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="game-container">
+            <div class="game-board">
+                <h2>⚫ 오목 (15x15)</h2>
+                <p>15x15 보드에서 가로, 세로, 대각선으로 5개를 연속으로 놓으면 승리합니다.</p>
+                
+                <div class="game-status">
+                    <h3>게임 규칙</h3>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>플레이어는 흑돌(⚫), AI는 백돌(⚪)</li>
+                        <li>가로, 세로, 대각선으로 5개 연속 놓기</li>
+                        <li>Claude AI가 전략적으로 플레이</li>
+                    </ul>
+                </div>
+                
+                <div class="difficulty-selector">
+                    <label for="difficulty">난이도:</label>
+                    <select id="difficulty">
+                        <option value="easy">쉬움</option>
+                        <option value="normal">보통</option>
+                        <option value="hard">어려움</option>
+                        <option value="expert">전문가</option>
+                    </select>
+                </div>
+                
+                <div class="game-controls">
+                    <button class="btn-game" onclick="startGame()">게임 시작</button>
+                </div>
+            </div>
+
+            <div class="game-board" id="gameArea" style="display: none;">
+                <h2>게임 진행</h2>
+                <div class="omok-board" id="omokBoard"></div>
+                
+                <div class="game-status" id="gameStatus">
+                    <p>게임이 시작되었습니다! 플레이어 차례입니다.</p>
+                </div>
+                
+                <div class="game-controls">
+                    <button class="btn-game" onclick="endGame()">게임 종료</button>
+                    <button class="btn-game" onclick="restartGame()">다시 시작</button>
+                </div>
+            </div>
+
+            <div class="game-board" id="gameOver" style="display: none;">
+                <h2>게임 종료</h2>
+                <div id="finalResult"></div>
+                <button class="btn-game" onclick="restartGame()">새 게임 시작</button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 게임 컬렉션. Django + Claude AI로 구축되었습니다.</p>
+        </div>
+    </footer>
+
+    <script>
+        let board = [];
+        let currentPlayer = 'black';
+        let gameActive = false;
+        let difficulty = 'normal';
+        const BOARD_SIZE = 15;
+
+        function createBoard() {
+            const boardElement = document.getElementById('omokBoard');
+            boardElement.innerHTML = '';
+            
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'omok-cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.onclick = () => makeMove(i, j);
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+
+        function startGame() {
+            difficulty = document.getElementById('difficulty').value;
+            board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(''));
+            currentPlayer = 'black';
+            gameActive = true;
+            
+            document.getElementById('gameArea').style.display = 'block';
+            document.getElementById('gameStatus').innerHTML = '<p>게임이 시작되었습니다! 플레이어 차례입니다.</p>';
+            
+            createBoard();
+        }
+
+        function makeMove(row, col) {
+            if (!gameActive || board[row][col] !== '' || currentPlayer !== 'black') {
+                return;
+            }
+            
+            // 플레이어 이동
+            board[row][col] = 'black';
+            updateCell(row, col, 'black');
+            
+            if (checkWinner(row, col, 'black')) {
+                endGame('player');
+                return;
+            }
+            
+            // AI 차례
+            currentPlayer = 'white';
+            document.getElementById('gameStatus').innerHTML = '<p>AI가 생각하고 있습니다...</p>';
+            
+            setTimeout(aiMove, 1000);
+        }
+
+        function aiMove() {
+            if (!gameActive) return;
+            
+            // AI 전략: 난이도에 따른 수준
+            let aiRow, aiCol;
+            
+            switch(difficulty) {
+                case 'easy':
+                    [aiRow, aiCol] = findRandomMove();
+                    break;
+                case 'normal':
+                    [aiRow, aiCol] = findStrategicMove();
+                    break;
+                case 'hard':
+                    [aiRow, aiCol] = findAdvancedMove();
+                    break;
+                case 'expert':
+                    [aiRow, aiCol] = findExpertMove();
+                    break;
+                default:
+                    [aiRow, aiCol] = findStrategicMove();
+            }
+            
+            if (aiRow !== -1 && aiCol !== -1) {
+                board[aiRow][aiCol] = 'white';
+                updateCell(aiRow, aiCol, 'white');
+                
+                if (checkWinner(aiRow, aiCol, 'white')) {
+                    endGame('ai');
+                    return;
+                }
+            }
+            
+            // 플레이어 차례
+            currentPlayer = 'black';
+            document.getElementById('gameStatus').innerHTML = '<p>플레이어 차례입니다.</p>';
+        }
+
+        function findRandomMove() {
+            const emptyCells = [];
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === '') {
+                        emptyCells.push([i, j]);
+                    }
+                }
+            }
+            
+            if (emptyCells.length > 0) {
+                const randomIndex = Math.floor(Math.random() * emptyCells.length);
+                return emptyCells[randomIndex];
+            }
+            return [-1, -1];
+        }
+
+        function findStrategicMove() {
+            // 승리할 수 있는 수 찾기
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === '') {
+                        board[i][j] = 'white';
+                        if (checkWinner(i, j, 'white')) {
+                            board[i][j] = '';
+                            return [i, j];
+                        }
+                        board[i][j] = '';
+                    }
+                }
+            }
+            
+            // 플레이어의 승리 수 방어
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === '') {
+                        board[i][j] = 'black';
+                        if (checkWinner(i, j, 'black')) {
+                            board[i][j] = '';
+                            return [i, j];
+                        }
+                        board[i][j] = '';
+                    }
+                }
+            }
+            
+            // 중앙 근처 우선
+            const center = Math.floor(BOARD_SIZE / 2);
+            for (let i = center - 2; i <= center + 2; i++) {
+                for (let j = center - 2; j <= center + 2; j++) {
+                    if (i >= 0 && i < BOARD_SIZE && j >= 0 && j < BOARD_SIZE && board[i][j] === '') {
+                        return [i, j];
+                    }
+                }
+            }
+            
+            return findRandomMove();
+        }
+
+        function findAdvancedMove() {
+            // 더 고급 전략: 4연속 만들기, 3연속 방어 등
+            let bestMove = findStrategicMove();
+            if (bestMove[0] !== -1) return bestMove;
+            
+            // 3연속 만들기 시도
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === '') {
+                        if (countConsecutive(i, j, 'white') >= 3) {
+                            return [i, j];
+                        }
+                    }
+                }
+            }
+            
+            return findRandomMove();
+        }
+
+        function findExpertMove() {
+            // 최고 수준 전략: 미니맥스 알고리즘 등
+            let bestMove = findAdvancedMove();
+            if (bestMove[0] !== -1) return bestMove;
+            
+            // 보드 전체 분석
+            let bestScore = -Infinity;
+            let bestPosition = [-1, -1];
+            
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === '') {
+                        let score = evaluatePosition(i, j);
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestPosition = [i, j];
+                        }
+                    }
+                }
+            }
+            
+            if (bestPosition[0] !== -1) {
+                return bestPosition;
+            }
+            
+            return findRandomMove();
+        }
+
+        function countConsecutive(row, col, player) {
+            const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+            let maxCount = 0;
+            
+            for (let [dr, dc] of directions) {
+                let count = 1;
+                
+                // 한 방향으로 세기
+                for (let step = 1; step < 5; step++) {
+                    let r = row + dr * step;
+                    let c = col + dc * step;
+                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE || board[r][c] !== player) {
+                        break;
+                    }
+                    count++;
+                }
+                
+                // 반대 방향으로 세기
+                for (let step = 1; step < 5; step++) {
+                    let r = row - dr * step;
+                    let c = col - dc * step;
+                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE || board[r][c] !== player) {
+                        break;
+                    }
+                    count++;
+                }
+                
+                maxCount = Math.max(maxCount, count);
+            }
+            
+            return maxCount;
+        }
+
+        function evaluatePosition(row, col) {
+            let score = 0;
+            
+            // 중앙에 가까울수록 높은 점수
+            const center = Math.floor(BOARD_SIZE / 2);
+            const distanceFromCenter = Math.abs(row - center) + Math.abs(col - center);
+            score += (BOARD_SIZE - distanceFromCenter) * 2;
+            
+            // 연속된 돌 개수에 따른 점수
+            const whiteCount = countConsecutive(row, col, 'white');
+            const blackCount = countConsecutive(row, col, 'black');
+            
+            if (whiteCount >= 5) score += 10000;
+            else if (whiteCount === 4) score += 1000;
+            else if (whiteCount === 3) score += 100;
+            else if (whiteCount === 2) score += 10;
+            
+            if (blackCount >= 5) score += 5000;
+            else if (blackCount === 4) score += 500;
+            else if (blackCount === 3) score += 50;
+            else if (blackCount === 2) score += 5;
+            
+            return score;
+        }
+
+        function updateCell(row, col, player) {
+            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            cell.className = `omok-cell ${player}`;
+        }
+
+        function checkWinner(row, col, player) {
+            const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+            
+            for (let [dr, dc] of directions) {
+                let count = 1;
+                
+                // 한 방향으로 세기
+                for (let step = 1; step < 5; step++) {
+                    let r = row + dr * step;
+                    let c = col + dc * step;
+                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE || board[r][c] !== player) {
+                        break;
+                    }
+                    count++;
+                }
+                
+                // 반대 방향으로 세기
+                for (let step = 1; step < 5; step++) {
+                    let r = row - dr * step;
+                    let c = col - dc * step;
+                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE || board[r][c] !== player) {
+                        break;
+                    }
+                    count++;
+                }
+                
+                if (count >= 5) {
+                    // 승리 라인 하이라이트
+                    highlightWinningLine(row, col, dr, dc);
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        function highlightWinningLine(startRow, startCol, dr, dc) {
+            for (let step = -2; step <= 2; step++) {
+                let r = startRow + dr * step;
+                let c = startCol + dc * step;
+                if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                    const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                    cell.classList.add('winning');
+                }
+            }
+        }
+
+        function endGame(winner) {
+            gameActive = false;
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'block';
+            
+            const finalResult = document.getElementById('finalResult');
+            if (winner === 'player') {
+                finalResult.innerHTML = '<h3>🎉 축하합니다! AI를 이겼습니다!</h3>';
+            } else if (winner === 'ai') {
+                finalResult.innerHTML = '<h3>😔 아쉽네요. AI가 승리했습니다.</h3>';
+            }
+        }
+
+        function restartGame() {
+            board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(''));
+            currentPlayer = 'black';
+            gameActive = false;
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('gameStatus').innerHTML = '<p>게임이 시작되었습니다!</p>';
+        }
+    </script>
+</body>
+</html>
