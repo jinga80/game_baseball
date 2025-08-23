@@ -16,15 +16,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 애플리케이션 코드 복사
 COPY . .
 
-# 정적 파일 수집
-RUN python3 manage.py collectstatic --noinput
+# 환경변수 설정
+ENV PYTHONPATH=/app
+ENV DJANGO_SETTINGS_MODULE=game_collection.settings
+ENV PYTHONUNBUFFERED=1
 
 # 포트 노출
 EXPOSE 8000
 
-# 환경변수 설정
-ENV PYTHONPATH=/app
-ENV DJANGO_SETTINGS_MODULE=game_collection.settings
-
 # 애플리케이션 실행
-CMD ["gunicorn", "game_collection.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "game_collection.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1"]
