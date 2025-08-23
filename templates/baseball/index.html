@@ -290,4 +290,347 @@
             },
             'normal': {
                 strategy: '기본 전략',
-                difficult
+                difficulty: '일반인',
+                player: '숫자야구 애호가'
+            },
+            'hard': {
+                strategy: '고급 전략',
+                difficulty: '숙련자',
+                player: '숫자야구 고수'
+            },
+            'expert': {
+                strategy: 'Knuth 알고리즘',
+                difficulty: '전문가',
+                player: '숫자야구 마스터'
+            }
+        };
+
+        // 난이도 변경 시 정보 업데이트
+        document.getElementById('difficulty').addEventListener('change', function() {
+            updateDifficultyInfo();
+        });
+
+        function updateDifficultyInfo() {
+            const difficulty = document.getElementById('difficulty').value;
+            const info = difficultyInfo[difficulty];
+            
+            document.getElementById('aiStrategy').textContent = info.strategy;
+            document.getElementById('expectedDifficulty').textContent = info.difficulty;
+            document.getElementById('recommendedPlayer').textContent = info.player;
+            document.getElementById('difficultyInfo').style.display = 'grid';
+        }
+
+        // 초기 난이도 정보 표시
+        updateDifficultyInfo();
+
+        function startGame() {
+            const digitCount = document.getElementById('digitCount').value;
+            const difficulty = document.getElementById('difficulty').value;
+            
+            // 버튼 비활성화
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('startBtn').textContent = '게임 시작 중...';
+            
+            // 게임 시작 API 호출
+            fetch('/baseball/start/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    digitCount: parseInt(digitCount),
+                    difficulty: difficulty
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentGame = data;
+                    currentPlayerId = data.playerId;
+                    
+                    // 게임 화면 표시
+                    document.getElementById('gameSetup').style.display = 'none';
+                    document.getElementById('gameArea').style.display = 'block';
+                    
+                    // 게임 정보 업데이트
+                    document.getElementById('gameDifficulty').textContent = difficulty;
+                    document.getElementById('currentRound').textContent = '1';
+                    document.getElementById('remainingRounds').textContent = data.maxRounds;
+                    
+                    // 성공 메시지
+                    showMessage(data.message, 'success');
+                    
+                    // 입력 필드에 포커스
+                    document.getElementById('guessInput').focus();
+                } else {
+                    showMessage('게임 시작 실패: ' + data.error, 'error');
+                    resetStartButton();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('게임 시작 중 오류가 발생했습니다.', 'error');
+                resetStartButton();
+            });
+        }
+
+        function resetStartButton() {
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').textContent = '🚀 게임 시작';
+        }
+
+        function makeGuess() {
+            if (!currentGame || isAITurn) return;
+            
+            const guess = document.getElementById('guessInput').value;
+            if (!guess || guess.length !== currentGame.digitCount) {
+                showMessage(`${currentGame.digitCount}자리 숫자를 입력해주세요.`, 'error');
+                return;
+            }
+
+            // 버튼 비활성화
+            document.getElementById('guessBtn').disabled = true;
+            document.getElementById('guessBtn').textContent = '처리 중...';
+            
+            // 추측 API 호출
+            fetch('/baseball/guess/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    gameId: currentGame.gameId,
+                    playerId: currentPlayerId,
+                    guessNumber: guess
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayResult(data, guess);
+                    updateGameInfo(data);
+                    
+                    if (data.gameOver) {
+                        endGame(data);
+                    } else if (data.aiGuess) {
+                        // AI 차례 처리
+                        processAITurn(data.aiGuess);
+                    }
+                } else {
+                    showMessage('추측 실패: ' + data.error, 'error');
+                }
+                
+                resetGuessButton();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('추측 중 오류가 발생했습니다.', 'error');
+                resetGuessButton();
+            });
+
+            document.getElementById('guessInput').value = '';
+        }
+
+        function resetGuessButton() {
+            document.getElementById('guessBtn').disabled = false;
+            document.getElementById('guessBtn').textContent = '🎯 추측하기';
+        }
+
+        function displayResult(data, guess) {
+            const result = document.getElementById('gameResult');
+            const history = document.getElementById('gameHistory');
+            
+            const resultHtml = `
+                <div class="result">
+                    <h3>🎯 추측 결과</h3>
+                    <p><strong>추측:</strong> <span class="guess-number">${guess}</span></p>
+                    <div class="result-badges">
+                        <span class="badge badge-strike">${data.strikes} Strike</span>
+                        <span class="badge badge-ball">${data.balls} Ball</span>
+                    </div>
+                </div>
+            `;
+            
+            result.innerHTML = resultHtml;
+            
+            // 히스토리에 추가
+            gameHistory.push({
+                guess: guess,
+                strikes: data.strikes,
+                balls: data.balls,
+                round: data.currentRound - 1
+            });
+            
+            updateHistory();
+        }
+
+        function updateGameInfo(data) {
+            document.getElementById('currentRound').textContent = data.currentRound;
+            document.getElementById('remainingRounds').textContent = data.remainingRounds;
+        }
+
+        function processAITurn(aiGuess) {
+            isAITurn = true;
+            
+            const aiTurnArea = document.getElementById('aiTurnArea');
+            aiTurnArea.style.display = 'block';
+            
+            aiTurnArea.innerHTML = `
+                <div class="ai-turn">
+                    <h4>🤖 AI 차례</h4>
+                    <p>AI가 추측 중입니다...</p>
+                </div>
+            `;
+            
+            // AI 추측 결과 표시
+            setTimeout(() => {
+                aiTurnArea.innerHTML = `
+                    <div class="ai-turn">
+                        <h4>🤖 AI 추측</h4>
+                        <p><strong>AI 추측:</strong> <span class="guess-number">${aiGuess.guess}</span></p>
+                        <div class="result-badges">
+                            <span class="badge badge-strike">${aiGuess.strikes} Strike</span>
+                            <span class="badge badge-ball">${aiGuess.balls} Ball</span>
+                        </div>
+                    </div>
+                `;
+                
+                // AI 힌트 표시
+                if (aiGuess.aiHint) {
+                    const aiHintArea = document.getElementById('aiHintArea');
+                    aiHintArea.style.display = 'block';
+                    aiHintArea.innerHTML = `
+                        <div class="ai-hint">
+                            <h4>💡 AI 힌트</h4>
+                            <p>${aiGuess.aiHint}</p>
+                        </div>
+                    `;
+                }
+                
+                // AI 차례 종료
+                setTimeout(() => {
+                    isAITurn = false;
+                    aiTurnArea.style.display = 'none';
+                    document.getElementById('guessInput').focus();
+                }, 3000);
+                
+            }, 1500);
+        }
+
+        function updateHistory() {
+            const history = document.getElementById('gameHistory');
+            let historyHtml = '<h3>📊 게임 기록</h3><div class="game-history">';
+            
+            gameHistory.forEach((record, index) => {
+                historyHtml += `
+                    <div class="history-item">
+                        <span class="guess-number">${record.guess}</span>
+                        <div class="result-badges">
+                            <span class="badge badge-strike">${record.strikes}S</span>
+                            <span class="badge badge-ball">${record.balls}B</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            historyHtml += '</div>';
+            history.innerHTML = historyHtml;
+        }
+
+        function endGame(data) {
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'block';
+            
+            const finalResult = document.getElementById('finalResult');
+            if (data.winner === 'player') {
+                finalResult.innerHTML = `
+                    <div class="success">
+                        <h3>🎉 축하합니다! 승리했습니다!</h3>
+                        <p><strong>정답:</strong> ${data.secretNumber}</p>
+                        <p><strong>총 라운드:</strong> ${data.totalRounds}</p>
+                    </div>
+                `;
+            } else {
+                finalResult.innerHTML = `
+                    <div class="error">
+                        <h3>😔 아쉽네요. AI가 승리했습니다.</h3>
+                        <p><strong>정답:</strong> ${data.secretNumber}</p>
+                        <p><strong>총 라운드:</strong> ${data.totalRounds}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function restartGame() {
+            if (currentGame) {
+                // 기존 게임 종료
+                fetch('/baseball/restart/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        gameId: currentGame.gameId,
+                        playerId: currentPlayerId
+                    })
+                });
+            }
+            
+            // 상태 초기화
+            currentGame = null;
+            currentPlayerId = null;
+            gameHistory = [];
+            isAITurn = false;
+            
+            // 화면 초기화
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('gameSetup').style.display = 'block';
+            document.getElementById('gameResult').innerHTML = '';
+            document.getElementById('gameHistory').innerHTML = '';
+            document.getElementById('aiHintArea').style.display = 'none';
+            document.getElementById('aiTurnArea').style.display = 'none';
+            
+            // 버튼 초기화
+            resetStartButton();
+            resetGuessButton();
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                makeGuess();
+            }
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            
+            document.querySelector('.game-container').insertBefore(messageDiv, document.querySelector('.game-container').firstChild);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>
